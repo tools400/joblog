@@ -20,6 +20,8 @@
       *                                                                     *
       *  Date        Name          Description                              *
       *  ----------  ------------  ---------------------------------------  *
+      *  19.04.2019  Th.Raddatz    Fixed unexpected error because size of   *
+      *                            buffer 'oljl0100_buffer' was too small.  *
       *                                                                     *
       *=====================================================================*
       *   >>PRE-COMPILER<<                                                  *
@@ -29,7 +31,7 @@
       *     >>COMPILE<<                                                     *
       *       >>PARM<< TRUNCNBR(*NO);                                       *
       *       >>PARM<< DBGVIEW(*LIST);                                      *
-      *       >>PARM<< TGTRLS(V6R1M0  );                                    *
+      *       >>PARM<< TGTRLS(V7R1M0  );                                    *
       *       >>PARM<< OPTION(*EVENTF);                                     *
       *     >>END-COMPILE<<                                                 *
       *     >>EXECUTE<<                                                     *
@@ -765,7 +767,7 @@
       *
       *  Local fields
      D oljl0100_buffer...
-     D                 s           8192
+     D                 s          24576
      D  oljl0100       ds                  likeds(oljl0100_t)
      D                                     based(pOljl0100)
      D pOljl0100       s               *   inz(%addr(oljl0100_buffer))
@@ -776,6 +778,11 @@
                  : i_hRequest: o_listInf: 1: i_rcdNbr: o_errCode);
 
          clear jobLogEntry;
+
+         if (o_errCode.bytAvl > 0);
+            return jobLogEntry;
+         endif;
+
          jobLogEntry.msgSeverity = oljl0100.msgSeverity;
          jobLogEntry.msgID = oljl0100.msgID;
          jobLogEntry.msgType = oljl0100.msgType;
@@ -977,11 +984,18 @@
 
          dow (fieldInf.fieldId <> i_fieldId and fieldInf.ofsNxtFldInf <> 0);
             pFieldInf = pOljl0100 + fieldInf.ofsNxtFldInf;
+            if (pFieldInf > pOljl0100 + i_buffLen);
+               return '*ERR';
+            endif;
          enddo;
 
          if (fieldInf.fieldId = i_fieldId);
             pData = pFieldInf + %size(fieldInf);
-            fieldData = %subst(data: 1: fieldInf.lenData);
+            if (fieldInf.lenData <= %len(data));
+               fieldData = %subst(data: 1: fieldInf.lenData);
+            else;
+               fieldData = %subst(data: 1: %len(data));
+            endif;
          else;
             fieldData = '';
          endif;

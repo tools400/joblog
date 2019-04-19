@@ -51,7 +51,7 @@
       appblddate CDATA #REQUIRED
      >
      ]>
-<upload  appname="JOBLOG"  appauthor="Thomas Raddatz"  appblddate=" 4/19/2018">
+<upload  appname="JOBLOG"  appauthor="Thomas Raddatz"  appblddate=" 4/19/2019">
 <install_instructions><![CDATA[
      *----------------------------------------------------------------      ------
      *  1. Upload entire XML to your AS/400 to a source file 112 long, into any mbr
@@ -2478,13 +2478,13 @@ srclen  =  "00112"
 srccssid=  "00273">
 <copysrc><![CDATA[
       /if not defined(COPYRIGHT_DSPEC)
-     H COPYRIGHT('V1.0.0 - 09.02.2017 - mailto:thomas.raddatz@tools400.de')
+     H COPYRIGHT('V1.0.1 - 19.04.2019 - mailto:thomas.raddatz@tools400.de')
       /eof
       /endif
      D JOBLOG_VERSION...
-     D                 C                   '1.0.0'
+     D                 C                   '1.0.1'
      D JOBLOG_DATE...
-     D                 C                   '09.02.2017'
+     D                 C                   '19.04.2019'
 ]]>  </copysrc>
 </mbr>
 <sendmsg  sendmsgid="CPF9897" sendmsgtype = "*STATUS   "><![CDATA[
@@ -2574,7 +2574,7 @@ srccssid=  "00273">
      /*     >>PARM<< ALWLIBUPD(*YES);                                         */
      /*     >>PARM<< BNDSRVPGM(&LI/BASICS1);                                  */
      /*     >>PARM<< TEXT('Job Log API');                                     */
-     /*     >>PARM<< TGTRLS(V6R1M0  );                                        */
+     /*     >>PARM<< TGTRLS(V7R1M0  );                                        */
      /*     >>PARM<< DETAIL(*BASIC);                                          */
      /*   >>END-LINK<<                                                        */
      /*   >>EXECUTE<<                                                         */
@@ -2927,6 +2927,8 @@ srccssid=  "00273">
       *                                                                     *
       *  Date        Name          Description                              *
       *  ----------  ------------  ---------------------------------------  *
+      *  19.04.2019  Th.Raddatz    Fixed unexpected error because size of   *
+      *                            buffer 'oljl0100_buffer' was too small.  *
       *                                                                     *
       *=====================================================================*
       *   >>PRE-COMPILER<<                                                  *
@@ -2936,7 +2938,7 @@ srccssid=  "00273">
       *     >>COMPILE<<                                                     *
       *       >>PARM<< TRUNCNBR(*NO);                                       *
       *       >>PARM<< DBGVIEW(*LIST);                                      *
-      *       >>PARM<< TGTRLS(V6R1M0  );                                    *
+      *       >>PARM<< TGTRLS(V7R1M0  );                                    *
       *       >>PARM<< OPTION(*EVENTF);                                     *
       *     >>END-COMPILE<<                                                 *
       *     >>EXECUTE<<                                                     *
@@ -3672,7 +3674,7 @@ srccssid=  "00273">
       *
       *  Local fields
      D oljl0100_buffer...
-     D                 s           8192
+     D                 s          24576
      D  oljl0100       ds                  likeds(oljl0100_t)
      D                                     based(pOljl0100)
      D pOljl0100       s               *   inz(%addr(oljl0100_buffer))
@@ -3683,6 +3685,11 @@ srccssid=  "00273">
                  : i_hRequest: o_listInf: 1: i_rcdNbr: o_errCode);
 
          clear jobLogEntry;
+
+         if (o_errCode.bytAvl > 0);
+            return jobLogEntry;
+         endif;
+
          jobLogEntry.msgSeverity = oljl0100.msgSeverity;
          jobLogEntry.msgID = oljl0100.msgID;
          jobLogEntry.msgType = oljl0100.msgType;
@@ -3884,11 +3891,18 @@ srccssid=  "00273">
 
          dow (fieldInf.fieldId <> i_fieldId and fieldInf.ofsNxtFldInf <> 0);
             pFieldInf = pOljl0100 + fieldInf.ofsNxtFldInf;
+            if (pFieldInf > pOljl0100 + i_buffLen);
+               return '*ERR';
+            endif;
          enddo;
 
          if (fieldInf.fieldId = i_fieldId);
             pData = pFieldInf + %size(fieldInf);
-            fieldData = %subst(data: 1: fieldInf.lenData);
+            if (fieldInf.lenData <= %len(data));
+               fieldData = %subst(data: 1: fieldInf.lenData);
+            else;
+               fieldData = %subst(data: 1: %len(data));
+            endif;
          else;
             fieldData = '';
          endif;
