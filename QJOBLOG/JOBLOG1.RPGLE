@@ -23,6 +23,9 @@
       *  19.04.2019  Th.Raddatz    Fixed unexpected error because size of   *
       *                            buffer 'oljl0100_buffer' was too small.  *
       *                                                                     *
+      *  26.11.2019  Th.Raddatz    Fixed problem, that QGYGTLE crashed with *
+      *                            CPF3C53 (Job not found).                 *
+      *                                                                     *
       *=====================================================================*
       *   >>PRE-COMPILER<<                                                  *
       *     >>CRTCMD<<  CRTRPGMOD   MODULE(&LI/&OB) +                       *
@@ -243,17 +246,21 @@
 
          clear handle;
          handle.isOpen = cFalse;
-         handle.isEOF = cFalse;
+         handle.isEOF = cTrue;
          handle.qJob = qJob;
          handle.direction = direction;
          handle.strMsgKey = strMsgKey;
          handle.rcdNbr = 0;
-         handle.listInf = *ALLx'00';
+         clear handle.listInf;
 
          handle.isOpen = openJobLog(
                             handle.qJob: options: handle.direction
                             : handle.strMsgKey: handle.listInf
                             : handle.options: errCode);
+
+         if (handle.isOpen);
+            handle.isEOF = cFalse;
+         endif;
 
          return hJobLog;
 
@@ -325,6 +332,10 @@
       /FREE
 
          pHandle = HANDLE_getPointer(i_hJobLog);
+
+         if (not handle.isOpen);
+            return cFalse;
+         endif;
 
          if (handle.isEOF);
             return cFalse;
@@ -728,6 +739,9 @@
          offs = offs + sizeFldsRtn;
          memcpy(pBuffer + offs: %addr(callMsgQ): sizeCallMsgQ);
          offs = offs + sizeCallMsgQ;
+
+         clear o_errCode;
+         o_errCode.bytAvl = %size(o_errCode);
 
          QGYOLJBL(oljl0100_buffer: %size(oljl0100_buffer): o_listInf: 0
                   : %subst(buffer: 1: buffSize)
