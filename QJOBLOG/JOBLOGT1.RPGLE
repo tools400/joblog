@@ -71,9 +71,11 @@
       *
      D PGM_ENTRY_POINT...
      D                 PR                  extpgm('JOBLOGT1')
+     D  gi_job                       28A   const options(*nopass)
       *
      D main...
      D                 PR                         extproc('main')
+     D  i_qJob                             const likeds(qJob_t)
       *
       *  Logs a message to the job log or appends it to a spooled file
      D logMsg...
@@ -95,11 +97,25 @@
       *===============================================================*
      D PGM_ENTRY_POINT...
      D                 PI
+     D  gi_job                       28A   const options(*nopass)
       *
+     D g_s1            s             10i 0
+     D g_s2            s             10i 0
+     D g_qJob          ds                  likeds(qJob_t)
       * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       /FREE
 
-         main();
+         if (%parms() >= %parmnum(gi_job) and gi_job <> '*');
+           g_s1 = %scan('/': gi_job: 1);
+           g_s2 = %scan('/': gi_job: g_s1+1);
+           g_qJob.nbr = %subst(gi_job: 1: g_s1-1);
+           g_qJob.user = %subst(gi_job: g_s1+1: g_s2-(g_s1+1));
+           g_qJob.name = %subst(gi_job: g_s2+1);
+         else;
+           g_qJob.name = '*';
+         endif;
+
+         main(g_qJob);
 
          if (%open(QSYSPRT));
             close QSYSPRT;
@@ -222,6 +238,7 @@
       *
      D main...
      D                 PI
+     D  i_qJob                             const likeds(qJob_t)
       *
       *  Helper fields
      D hJobLog         s                   like(JobLog_handle_t)
@@ -231,21 +248,21 @@
 
          // Retrieve first (oldest) job log entry.
          logMsg('Retrieving first (oldest) job log entry');
-         JobLog_getOldest(*omit: jobLogEntry);
+         JobLog_getOldest(i_qJob: jobLogEntry);
          logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
          logMsg();
 
          // Retrieve last (newest) job log entry.
          logMsg('Retrieving last (newest) job log entry');
-         JobLog_getNewest(*omit: jobLogEntry);
+         JobLog_getNewest(i_qJob: jobLogEntry);
          logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
          logMsg();
 
          // Open the job log
          logMsg('Retrieving job log entries from newest to oldest entry');
-         hJobLog = JobLog_open(*omit: JOBLOG_OPTION_MSG +
-                                      JOBLOG_OPTION_REPLACE_VARS +
-                                      JOBLOG_OPTION_SENDER);
+         hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
+                                       JOBLOG_OPTION_REPLACE_VARS +
+                                       JOBLOG_OPTION_SENDER);
 
          // Spin through the job log entries from oldest to newest.
          dow (JobLog_getEntry(hJobLog: jobLogEntry));
@@ -258,10 +275,10 @@
 
          // Open the job log
          logMsg('Retrieving job log entries from oldest to newest entry');
-         hJobLog = JobLog_open(*omit: JOBLOG_OPTION_MSG +
-                                      JOBLOG_OPTION_REPLACE_VARS +
-                                      JOBLOG_OPTION_SENDER
-                                    : JOBLOG_NEXT);
+         hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
+                                       JOBLOG_OPTION_REPLACE_VARS +
+                                       JOBLOG_OPTION_SENDER
+                                     : JOBLOG_NEXT);
 
          // Spin through the job log entries from oldest to newest.
          dow (JobLog_getEntry(hJobLog: jobLogEntry));
