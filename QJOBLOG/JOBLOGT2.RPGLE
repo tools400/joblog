@@ -1,6 +1,6 @@
       *===============================================================*
       *                                                               *
-      *  erstellt : 19.05.2013                                        *
+      *  erstellt : 29.11.2019                                        *
       *                                                               *
       *===============================================================*
       *                                                               *
@@ -8,7 +8,7 @@
       *                                                               *
       *  Rahmentestprogramm mit Protokollausgabe                      *
       *  Thema:                                                       *
-      *     Job Log API - Example 1                                   *
+      *     Job Log API - Example 2                                   *
       *                                                               *
       *===============================================================*
       * >>PRE-COMPILER<<                                              *
@@ -50,7 +50,7 @@
       * ------------------------------------
       *
      D PGM_ENTRY_POINT...
-     D                 PR                  extpgm('JOBLOGT1')
+     D                 PR                  extpgm('JOBLOGT2')
      D  gi_job                       28A   const options(*nopass)
       *
      D main...
@@ -222,41 +222,14 @@
       * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       /FREE
 
-       // Retrieve first (oldest) job log entry.
-       logMsg('Retrieving first (oldest) job log entry');
-       JobLog_getOldest(i_qJob: jobLogEntry);
-       logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
-       logMsg();
-
-       // Retrieve last (newest) job log entry.
-       logMsg('Retrieving last (newest) job log entry');
-       JobLog_getNewest(i_qJob: jobLogEntry);
-       logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
-       logMsg();
-
-       // Open the job log
+       // Open the job log asynchronously
        logMsg('Retrieving job log entries from newest to oldest entry');
        hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
                                      JOBLOG_OPTION_REPLACE_VARS +
-                                     JOBLOG_OPTION_SENDER);
-
-       if (JobLog_isOpen(hJobLog));
-         // Spin through the job log entries from oldest to newest.
-         dow (JobLog_getEntry(hJobLog: jobLogEntry));
-           logMsg(jobLogEntry.msgID + ': ' +
-                 %char(jobLogEntry.timeSent) + ' - ' + jobLogEntry.msgText);
-         enddo;
-
-         // Close the job log
-         JobLog_close(hJobLog);
-       endif;
-
-       // Open the job log
-       logMsg('Retrieving job log entries from oldest to newest entry');
-       hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
-                                     JOBLOG_OPTION_REPLACE_VARS +
                                      JOBLOG_OPTION_SENDER
-                                   : JOBLOG_NEXT);
+                                   : JOBLOG_PREVIOUS
+                                   : *omit
+                                   : 60); // 60 secs timeout
 
        if (JobLog_isOpen(hJobLog));
          // Spin through the job log entries from oldest to newest.

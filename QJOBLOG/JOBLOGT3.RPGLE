@@ -1,6 +1,6 @@
       *===============================================================*
       *                                                               *
-      *  erstellt : 19.05.2013                                        *
+      *  erstellt : 02.12.2019                                        *
       *                                                               *
       *===============================================================*
       *                                                               *
@@ -8,7 +8,7 @@
       *                                                               *
       *  Rahmentestprogramm mit Protokollausgabe                      *
       *  Thema:                                                       *
-      *     Job Log API - Example 1                                   *
+      *     Job Log API - Example 3                                   *
       *                                                               *
       *===============================================================*
       * >>PRE-COMPILER<<                                              *
@@ -23,6 +23,7 @@
       *   >>CMD<<    CRTPGM       PGM(&LI/&OB) +                      *
       *                           MODULE(&LI/&OB) +                   *
       *                           BNDSRVPGM(*LIBL/BASICS1   +         *
+      *                                     *LIBL/LSTJOB    +         *
       *                                     *LIBL/JOBLOG  ) +         *
       *                           DETAIL(*BASIC) +                    *
       *                           ACTGRP(*NEW);                       *
@@ -41,6 +42,8 @@
       *  External Prototypes
       * ------------------------------------
       /COPY QBASICS1,PBASICS1                      SrvPgm: Basics 1
+      /COPY QLSTJOB,PLSTJOB                        SrvPgm: List Jobs
+      /COPY QLSTJOB,QUSLJOB                        List Job (QUSLJOB) API
       *
       *  Examinee
       /COPY QJOBLOG,PJOBLOG                        Job Log API
@@ -50,7 +53,7 @@
       * ------------------------------------
       *
      D PGM_ENTRY_POINT...
-     D                 PR                  extpgm('JOBLOGT1')
+     D                 PR                  extpgm('JOBLOGT3')
      D  gi_job                       28A   const options(*nopass)
       *
      D main...
@@ -92,7 +95,9 @@
          g_qJob.user = %subst(gi_job: g_s1+1: g_s2-(g_s1+1));
          g_qJob.name = %subst(gi_job: g_s2+1);
        else;
-         g_qJob.name = '*';
+         g_qJob.name = 'QZDASOINIT';
+         g_qJob.user = '*ALL';
+         g_qJob.nbr = '*ALL';
        endif;
 
        main(g_qJob);
@@ -217,56 +222,57 @@
      D  i_qJob                             const likeds(qJob_t)
       *
       *  Helper fields
-     D hJobLog         s                   like(JobLog_handle_t)
+     D hasJob          s               n
+     D hJobs           s                   like(lstJob_handle_t) inz
+     D jobl0100        ds                  likeds(jobl0100_t) inz
+     D qJob            ds                  likeds(qJob_t) inz
+     D hJobLog         s                   like(JobLog_handle_t) inz
      D jobLogEntry     ds                  likeds(JobLog_jobLogEntry_t) inz
+     D count           s             10i 0
       * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       /FREE
 
-       // Retrieve first (oldest) job log entry.
-       logMsg('Retrieving first (oldest) job log entry');
-       JobLog_getOldest(i_qJob: jobLogEntry);
-       logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
-       logMsg();
+       if (f_opnJobLst(i_qJob.name: i_qJob.user: i_qJob.nbr: '*ACTIVE'
+                       : cLSTJOB_ORDERBY_NONE: hJobs));
 
-       // Retrieve last (newest) job log entry.
-       logMsg('Retrieving last (newest) job log entry');
-       JobLog_getNewest(i_qJob: jobLogEntry);
-       logMsg(jobLogEntry.msgID + ' - ' + jobLogEntry.msgText);
-       logMsg();
+         hasJob = f_getFirstJob(hJobs: jobl0100);
+         dow (hasJob);
 
-       // Open the job log
-       logMsg('Retrieving job log entries from newest to oldest entry');
-       hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
-                                     JOBLOG_OPTION_REPLACE_VARS +
-                                     JOBLOG_OPTION_SENDER);
+           qJob.name = jobl0100.job;
+           qJob.user = jobl0100.user;
+           qJob.nbr = jobl0100.nbr;
 
-       if (JobLog_isOpen(hJobLog));
-         // Spin through the job log entries from oldest to newest.
-         dow (JobLog_getEntry(hJobLog: jobLogEntry));
-           logMsg(jobLogEntry.msgID + ': ' +
-                 %char(jobLogEntry.timeSent) + ' - ' + jobLogEntry.msgText);
+           // Open the job log asynchronously
+           hJobLog = JobLog_open(qJob: JOBLOG_OPTION_MSG +
+                                       JOBLOG_OPTION_REPLACE_VARS +
+                                       JOBLOG_OPTION_SENDER
+                                     : JOBLOG_PREVIOUS
+                                     : *omit
+                                     : 60); // 60 secs timeout
+
+           // ================================================
+           //   Do some other lengthy operations ...
+           // ================================================
+
+           if (JobLog_isOpen(hJobLog));
+             // Spin through the job log entries from oldest to newest.
+             count = 0;
+             dow (JobLog_getEntry(hJobLog: jobLogEntry));
+               count += 1;
+             enddo;
+
+             // Close the job log
+             JobLog_close(hJobLog);
+           endif;
+
+           logMsg(%trim(qJob.nbr)  + '/' +
+                  %trim(qJob.user) + '/' +
+                  %trim(qJob.name) + ' count#: ' + %char(count));
+
+           hasJob = f_getNextJob(hJobs: jobl0100);
          enddo;
 
-         // Close the job log
-         JobLog_close(hJobLog);
-       endif;
-
-       // Open the job log
-       logMsg('Retrieving job log entries from oldest to newest entry');
-       hJobLog = JobLog_open(i_qJob: JOBLOG_OPTION_MSG +
-                                     JOBLOG_OPTION_REPLACE_VARS +
-                                     JOBLOG_OPTION_SENDER
-                                   : JOBLOG_NEXT);
-
-       if (JobLog_isOpen(hJobLog));
-         // Spin through the job log entries from oldest to newest.
-         dow (JobLog_getEntry(hJobLog: jobLogEntry));
-           logMsg(jobLogEntry.msgID + ': ' +
-                  %char(jobLogEntry.timeSent) + ' - ' + jobLogEntry.msgText);
-         enddo;
-
-         // Close the job log
-         JobLog_close(hJobLog);
+         f_cloJobLst(hJobs);
        endif;
 
       /END-FREE

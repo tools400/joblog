@@ -23,8 +23,18 @@
       *  19.04.2019  Th.Raddatz    Fixed unexpected error because size of   *
       *                            buffer 'oljl0100_buffer' was too small.  *
       *                                                                     *
-      *  26.11.2019  Th.Raddatz    Fixed problem, that QGYGTLE crashed with *
-      *                            CPF3C53 (Job not found).                 *
+      *  02.12.2019  Th.Raddatz    Fixed MCH0601 "Space offset is outside   *
+      *                            current limit" in procedure openJobLog().*
+      *                            Added JobLog_isComplete().               *
+      *                            Added parameter i_timeout to             *
+      *                            JobLog_open() to control whether the     *
+      *                            list is opened synchronously or          *
+      *                            asynchronously.                          *
+      *                                                                     *
+      *  03.12.2019  Th.Raddatz    Added JobLog_isOpen().                   *
+      *                            Changed JobLog_open() to discard the     *
+      *                            handle, if the job log could not be      *
+      *                            opened.                                  *
       *                                                                     *
       *=====================================================================*
       *   >>PRE-COMPILER<<                                                  *
@@ -59,6 +69,8 @@
      D handle_t        ds                  qualified based(pDummy)
      D  isOpen                         n
      D  isEOF                          n
+     D  isAsync                        n
+     D  timeout                      10i 0
      D  qJob                               likeds(qJob_t)
      D  direction                          like(JobLog_direction_t)
      D  strMsgKey                          like(JobLog_msgKey_t)
@@ -101,8 +113,25 @@
      D  i_options                          const like(JobLog_options_t)
      D  i_direction                        const like(JobLog_direction_t)
      D  i_msgKey                           const like(JobLog_msgKey_t)
+     D  i_numRcdsRtn                 10i 0 const
      D  o_listInf                                likeds(qgy_opnListInf_t)
      D  o_options                                likeds(listOptions_t)
+     D  o_errCode                                likeds(errCode_t)
+      *
+      *  Waits until the specified list is completely built.
+     D waitForListToComplete...
+     D                 PR                        likeds(qgy_opnListInf_t)
+     D                                     extproc('waitForListToComplete')
+     D  i_hRequest                         const like(qgy_opnListInf_t.hRequest)
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+     D  i_timeout                    10i 0 const
+     D  o_errCode                                likeds(errCode_t)
+      *
+      *  Refreshs the "list information" on the progress of list-building.
+     D refreshListInformation...
+     D                 PR                        likeds(qgy_opnListInf_t)
+     D                                     extproc('refreshListInformation')
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
      D  o_errCode                                likeds(errCode_t)
       *
       *  Returns the next/previous job log entry.
@@ -112,7 +141,7 @@
      D  i_hRequest                         const like(qgy_opnListInf_t.hRequest)
      D  i_rcdNbr                     10i 0 const
      D  i_options                          const likeds(listOptions_t)
-     D  o_listInf                                likeds(qgy_opnListInf_t)
+     D  io_listInf                               likeds(qgy_opnListInf_t)
      D  o_errCode                                likeds(errCode_t)
       *
       *  Retrieves the character data of the specified field identifier.
@@ -159,9 +188,23 @@
      D                                     extproc('getTimeSent')
      D  i_oljl0100                         const  likeds(oljl0100_t)
       *
-      * ------------------------------------
-      *  Global fields & constants
-      * ------------------------------------
+      *  Returns cTrue, when the job associated with a given handle is open.
+     D isOpen...
+     D                 PR              n
+     D                                     extproc('isOpen')
+     D  i_pHandle                      *   const
+      *
+      *  Returns cTrue, when the job associated with a given handle is open.
+     D isComplete...
+     D                 PR              n
+     D                                     extproc('isComplete')
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+      *
+      *  Returns cTrue, when the list is in error.
+     D isError...
+     D                 PR              n
+     D                                     extproc('isError')
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
       *
       *=========================================================================
       *  Opens a job log.
@@ -177,6 +220,8 @@
       *   i_strMsgKey   - Optional. The message key to be used to begin
       *                   searching for messages to list from the job.
       *                   Default: depending on i_options.
+      *   i_timeout     - Optional. Wait timeout in seconds.
+      *                   Default: -1 (list is built synchronously)
       *
       *  Returns:
       *   hJobLog         Handle of the job log.
@@ -192,6 +237,7 @@
      D                                            options(*nopass: *omit)
      D  i_strMsgKey                        const  like(JobLog_msgKey_t)
      D                                            options(*nopass: *omit)
+     D  i_timeout                    10i 0 const  options(*nopass: *omit)
       *
       *  Return value
      D hJobLog         s                   like(JobLog_handle_t)
@@ -201,12 +247,15 @@
      D p_options       c                   2
      D p_direction     c                   3
      D p_strMsgKey     c                   4
+     D p_buildAsync    c                   5
       *
       *  Optional parameters
      D qJob            ds                  likeds(i_qJob) inz
      D options         s                   like(i_options) inz
      D direction       s                   like(i_direction) inz
      D strMsgKey       s                   like(i_strMsgKey) inz
+     D timeout         s                   like(i_timeout) inz
+     D numRcdsRtn      s             10i 0 inz
       *
       *  Local fields
      D errCode         ds                  likeds(errCode_t) inz
@@ -241,31 +290,49 @@
             strMsgKey = getDftMsgKey(direction);
          endif;
 
+         if (%parms() >= p_buildAsync and %addr(i_timeout) <> *NULL);
+            timeout = i_timeout;
+            if (timeout <= 0);
+               timeout = -1;
+            endif;
+         else;
+            timeout = -1;
+         endif;
+
          hJobLog = HANDLE_new('*JOBLOG': %size(handle_t));
          pHandle = HANDLE_getPointer(hJobLog);
 
          clear handle;
          handle.isOpen = cFalse;
          handle.isEOF = cTrue;
+         handle.isAsync = (timeOut > 0);
+         handle.timeout = timeout;
          handle.qJob = qJob;
          handle.direction = direction;
          handle.strMsgKey = strMsgKey;
          handle.rcdNbr = 0;
          clear handle.listInf;
 
+         if (handle.isAsync);
+            numRcdsRtn = 0;  // All records are built asynchronously
+         else;
+            numRcdsRtn = -1; // All records are built synchronously
+         endif;
+
          handle.isOpen = openJobLog(
                             handle.qJob: options: handle.direction
-                            : handle.strMsgKey: handle.listInf
-                            : handle.options: errCode);
+                            : handle.strMsgKey: numRcdsRtn
+                            : handle.listInf : handle.options: errCode);
 
          if (handle.isOpen);
             handle.isEOF = cFalse;
+         else;
+            JobLog_close(hJobLog);
          endif;
 
          return hJobLog;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -292,8 +359,7 @@
       /FREE
 
          pHandle = HANDLE_getPointer(io_hJobLog);
-
-         if (handle.isOpen);
+         if (isOpen(pHandle));
             QGYCLST(handle.listInf.hRequest: errCode);
             handle.isOpen = cFalse;
          endif;
@@ -302,7 +368,69 @@
          io_hJobLog = HANDLE_NULL;
 
       /END-FREE
+     P                 E
       *
+      *=========================================================================
+      *  Returns cTrue when the list has been opened.
+      *=========================================================================
+      *  Parameters:
+      *   i_hJobLog     - Required. Handle that was returned by JobLog_open().
+      *
+      *  Returns:
+      *   isOpen        - Contains cTrue when the list has been opened,
+      *                   else cFalse.
+      *=========================================================================
+     P JobLog_isOpen...
+     P                 B                   export
+     D                 PI              n
+     D  i_hJobLog                          const  like(JobLog_handle_t)
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         return isOpen(HANDLE_getPointer(i_hJobLog));
+
+      /END-FREE
+     P                 E
+      *
+      *=========================================================================
+      *  Returns cTrue when the list has been completly built.
+      *=========================================================================
+      *  Parameters:
+      *   io_hJobLog    - Required. Handle that was returned by JobLog_open().
+      *
+      *  Returns:
+      *   isComplete    - Contains cTrue when the list has been completely
+      *                   built, else cFalse.
+      *=========================================================================
+     P JobLog_isComplete...
+     P                 B                   export
+     D                 PI              n
+     D  i_hJobLog                          const  like(JobLog_handle_t)
+      *
+      *  Return value
+     D isCompleteLcl   s               n
+      *
+      *  Local fields
+     D listInf         ds                  likeds(qgy_opnListInf_t) inz
+     D errCode         ds                  likeds(errCode_t) inz
+      *
+      *  Job log handle
+     D handle          ds                  likeds(handle_t)
+     D                                     based(pHandle)
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         if (not isOpen(HANDLE_getPointer(i_hJobLog)));
+            return cFalse;
+         endif;
+
+         listInf = refreshListInformation(handle.listInf: errCode);
+
+         isCompleteLcl = isComplete(listInf.listStatInd);
+
+         return isCompleteLcl;
+
+      /END-FREE
      P                 E
       *
       *=========================================================================
@@ -332,8 +460,7 @@
       /FREE
 
          pHandle = HANDLE_getPointer(i_hJobLog);
-
-         if (not handle.isOpen);
+         if (not isOpen(pHandle));
             return cFalse;
          endif;
 
@@ -341,12 +468,21 @@
             return cFalse;
          endif;
 
+         if (handle.isAsync);
+            handle.listInf = waitForListToComplete(
+                                handle.listInf.hRequest: handle.listInf
+                                : handle.timeout: errCode);
+            if (f_isApiError(errCode) or not isComplete(handle.listInf));
+               return cFalse;
+            endif;
+         endif;
+
          o_jobLogEntry = getJobLogEntry(handle.listInf.hRequest
                                         : handle.rcdNbr + 1
                                         : handle.options
                                         : handle.listInf
                                         : errCode);
-         if (errCode.bytAvl <> 0);
+         if (f_isApiError(errCode));
             return cFalse;
          endif;
 
@@ -359,7 +495,6 @@
          return cTrue;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -403,9 +538,11 @@
          endif;
 
          isAvailable = cFalse;
+
+         // Build list asynchronously, but retrieve 1 record synchronously
          if (openJobLog(qJob
                         : JOBLOG_OPTION_MSG + JOBLOG_OPTION_REPLACE_VARS
-                        : JOBLOG_PREVIOUS: getDftMsgKey(JOBLOG_PREVIOUS)
+                        : JOBLOG_PREVIOUS: getDftMsgKey(JOBLOG_PREVIOUS): 1
                         : listInf: options: errCode));
             o_jobLogEntry = getJobLogEntry(
                                listInf.hRequest: 1: options: listInf: errCode);
@@ -418,7 +555,6 @@
          return isAvailable;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -462,9 +598,11 @@
          endif;
 
          isAvailable = cFalse;
+
+         // Build list asynchronously, but retrieve 1 record synchronously
          if (openJobLog(qJob
                         : JOBLOG_OPTION_MSG + JOBLOG_OPTION_REPLACE_VARS
-                        : JOBLOG_NEXT: getDftMsgKey(JOBLOG_NEXT)
+                        : JOBLOG_NEXT: getDftMsgKey(JOBLOG_NEXT): 1
                         : listInf: options: errCode));
             o_jobLogEntry = getJobLogEntry(
                                listInf.hRequest: 1: options: listInf: errCode);
@@ -477,7 +615,6 @@
          return isAvailable;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -543,7 +680,6 @@
          return msgType;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -565,7 +701,6 @@
          return Handle_isNull(i_hJobLog);
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -586,7 +721,6 @@
          return Handle_null();
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -599,6 +733,7 @@
      D  i_options                          const like(JobLog_options_t)
      D  i_direction                        const like(JobLog_direction_t)
      D  i_msgKey                           const like(JobLog_msgKey_t)
+     D  i_numRcdsRtn                 10i 0 const
      D  o_listInf                                likeds(qgy_opnListInf_t)
      D  o_options                                likeds(listOptions_t)
      D  o_errCode                                likeds(errCode_t)
@@ -731,7 +866,7 @@
          // Calculate buffer size of selection information
          buffSize = sizeSlcInf + sizeFldsRtn + sizeCallMsgQ;
 
-         pBuffer = %alloc(%size(buffSize));
+         pBuffer = %alloc(buffSize);
          offs = 0;
          memcpy(pBuffer + offs: %addr(slcInf): %size(slcInf));
          offs = offs + %size(slcInf);
@@ -741,27 +876,104 @@
          offs = offs + sizeCallMsgQ;
 
          clear o_errCode;
-         o_errCode.bytAvl = %size(o_errCode);
+         o_errCode.bytPrv = %size(o_errCode);
 
-         QGYOLJBL(oljl0100_buffer: %size(oljl0100_buffer): o_listInf: 0
+         QGYOLJBL(oljl0100_buffer: %size(oljl0100_buffer): o_listInf
+                  : i_numRcdsRtn
                   : %subst(buffer: 1: buffSize)
                   : buffSize
                   : o_errCode);
-
-         if (o_errCode.bytAvl = 0);
-            isOpen = cTrue;
-         else;
-            isOpen = cFalse;
-         endif;
 
          if (pBuffer <> *NULL);
             dealloc(N) pBuffer;
          endif;
 
+         if (f_isApiError(o_errCode));
+            isOpen = cFalse;
+         else;
+            isOpen = cTrue;
+         endif;
+
          return isOpen;
 
       /END-FREE
+     P                 E
       *
+      *=========================================================================
+      *  Waits until the specified list is completely built.
+      *=========================================================================
+     P waitForListToComplete...
+     P                 B
+     D                 PI                        likeds(qgy_opnListInf_t)
+     D  i_hRequest                         const like(qgy_opnListInf_t.hRequest)
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+     D  i_timeout                    10i 0 const
+     D  o_errCode                                likeds(errCode_t)
+      *
+      *  Return value
+     D listInf         ds                  likeds(qgy_opnListInf_t) inz
+      *
+      *  Local fields
+     D waitTime        s             10i 0
+     D maxTimestamp    s               z
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         listInf = i_listInf;
+         maxTimestamp = %timestamp() + %seconds(i_timeout);
+         waitTime = 0;
+
+         dow (not isComplete(listInf) and
+              not isError(listInf) and
+              %timestamp() < maxTimestamp);
+
+            p_wait(waitTime); // Wait 1 second
+            waitTime = 1;
+
+            listInf = refreshListInformation(listInf: o_errCode);
+
+         enddo;
+
+         return listInf;
+
+      /END-FREE
+     P                 E
+      *
+      *=========================================================================
+      *  Refreshs the "list information" on the progress of list-building.
+      *=========================================================================
+     P refreshListInformation...
+     P                 B
+     D                 PI                        likeds(qgy_opnListInf_t)
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+     D  o_errCode                                likeds(errCode_t)
+      *
+      *  Return value
+     D listInf         ds                  likeds(qgy_opnListInf_t) inz
+      *
+      *  Local fields
+     D rtnVal...
+     D                 ds                  qualified inz
+     D  ofsNxtEntry                  10I 0
+     D  ofsFldsRtn                   10I 0
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         clear o_errCode;
+         o_errCode.bytPrv = %size(o_errCode);
+
+         QGYGTLE(rtnVal: %size(rtnVal)
+                 : i_listInf.hRequest: listInf: 0: 0: o_errCode);
+
+         if (f_isApiError(o_errCode));
+            listInf = i_listInf;
+            listInf.infComplInd = 'C';
+            listInf.listStatInd = QGY_LIST_ERROR;
+         endif;
+
+         return listInf;
+
+      /END-FREE
      P                 E
       *
       *=========================================================================
@@ -773,7 +985,7 @@
      D  i_hRequest                         const like(qgy_opnListInf_t.hRequest)
      D  i_rcdNbr                     10i 0 const
      D  i_options                          const likeds(listOptions_t)
-     D  o_listInf                                likeds(qgy_opnListInf_t)
+     D  io_listInf                               likeds(qgy_opnListInf_t)
      D  o_errCode                                likeds(errCode_t)
       *
       *  Return value
@@ -789,7 +1001,7 @@
       /FREE
 
          QGYGTLE(oljl0100_buffer: %size(oljl0100_buffer)
-                 : i_hRequest: o_listInf: 1: i_rcdNbr: o_errCode);
+                 : i_hRequest: io_listInf: 1: i_rcdNbr: o_errCode);
 
          clear jobLogEntry;
 
@@ -870,7 +1082,6 @@
          return jobLogEntry;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -909,7 +1120,6 @@
          return fieldData;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -935,7 +1145,6 @@
          return fieldData;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -968,7 +1177,6 @@
          return fieldData;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -1017,7 +1225,6 @@
          return fieldData;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -1042,7 +1249,6 @@
          return msgKey;
 
       /END-FREE
-      *
      P                 E
       *
       *=========================================================================
@@ -1050,15 +1256,15 @@
       *=========================================================================
      P getTimeSent...
      P                 B
-     D                 PI              Z
+     D                 PI              z
      D  i_oljl0100                         const  likeds(oljl0100_t)
       *
       *  Return value
-     D timeSent        s               Z
+     D timeSent        s               z
       *
-     D date            s               D
-     D time            s               T
-     D mSecs           s             10I 0
+     D date            s               d
+     D time            s               t
+     D mSecs           s             10i 0
       * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       /FREE
 
@@ -1074,6 +1280,63 @@
          return timeSent;
 
       /END-FREE
+     P                 E
       *
+      *=========================================================================
+      *  Returns cTrue, when the job associated with a given handle is open.
+      *=========================================================================
+     P isOpen...
+     P                 B
+     D                 PI              n
+     D  i_pHandle                      *   const
+      *
+      *  Return value
+     D isOpen          s               n
+      *
+      *  Job log handle
+     D handle          ds                  likeds(handle_t)
+     D                                     based(i_pHandle)
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         if (i_pHandle <> *null and handle.isOpen);
+            isOpen = cTrue;
+         else;
+            isOpen = cFalse;
+         endif;
+
+         return isOpen;
+
+      /END-FREE
+     P                 E
+      *
+      *=========================================================================
+      *  Returns cTrue, when the list has been completely built.
+      *=========================================================================
+     P isComplete...
+     P                 B
+     D                 PI              n
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         return i_listInf.listStatInd = QGY_LIST_COMPLETE;
+
+      /END-FREE
+     P                 E
+      *
+      *=========================================================================
+      *  Returns cTrue, when the list is in error.
+      *=========================================================================
+     P isError...
+     P                 B
+     D                 PI              n
+     D  i_listInf                          const likeds(qgy_opnListInf_t)
+      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+      /FREE
+
+         return i_listInf.listStatInd = QGY_LIST_ERROR;
+
+      /END-FREE
      P                 E
       *

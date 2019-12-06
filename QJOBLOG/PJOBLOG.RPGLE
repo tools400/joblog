@@ -35,6 +35,7 @@
      D                                            options(*nopass: *omit)
      D  i_strMsgKey                        const  like(JobLog_msgKey_t)
      D                                            options(*nopass: *omit)
+     D  i_timeout                    10i 0 const  options(*nopass: *omit)
       *
       *  Closes a given job log.
      D JobLog_close...
@@ -43,6 +44,22 @@
      D                                     JobLog_close+
      D                                     ')
      D  io_hJobLog                                like(JobLog_handle_t)
+      *
+      *  Returns cTrue when the list has been opened.
+     D JobLog_isOpen...
+     D                 PR              n
+     D                                     extproc('JOBLOG1_+
+     D                                     JobLog_isOpen+
+     D                                     ')
+     D  i_hJobLog                          const  like(JobLog_handle_t)
+      *
+      *  Returns cTrue when the list has been completly built.
+     D JobLog_isComplete...
+     D                 PR              n
+     D                                     extproc('JOBLOG1_+
+     D                                     JobLog_isComplete+
+     D                                     ')
+     D  i_hJobLog                          const  like(JobLog_handle_t)
       *
       *  Returns the next job log entry.
      D JobLog_getEntry...

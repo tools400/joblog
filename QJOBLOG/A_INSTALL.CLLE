@@ -61,7 +61,19 @@
              DLTMOD     MODULE(&TOLIB/JOBLOGT1)
              MONMSG     MSGID(CPF2105)
 
+             DLTMOD     MODULE(&TOLIB/JOBLOGT2)
+             MONMSG     MSGID(CPF2105)
+
+             DLTMOD     MODULE(&TOLIB/JOBLOGT3)
+             MONMSG     MSGID(CPF2105)
+
              DLTPGM     PGM(&TOLIB/JOBLOGT1)
+             MONMSG     MSGID(CPF2105)
+
+             DLTPGM     PGM(&TOLIB/JOBLOGT2)
+             MONMSG     MSGID(CPF2105)
+
+             DLTPGM     PGM(&TOLIB/JOBLOGT3)
              MONMSG     MSGID(CPF2105)
 
      /* -------------------------------- */
@@ -94,6 +106,7 @@
      /*  Create test programs            */
      /* -------------------------------- */
              IF         COND(&CRTTSTPGM *EQ 'YES') THEN(DO)
+                /* Example 1 */
                 CRTRPGMOD  MODULE(&TOLIB/JOBLOGT1) +
                              SRCFILE(&SRCLIB/&SRCFILE) +
                              SRCMBR(*MODULE) +
@@ -114,6 +127,56 @@
 
                 DLTMOD    MODULE(&TOLIB/JOBLOGT1)
 
+                /* Example 2 */
+                CRTRPGMOD  MODULE(&TOLIB/JOBLOGT2) +
+                             SRCFILE(&SRCLIB/&SRCFILE) +
+                             SRCMBR(*MODULE) +
+                             DBGVIEW(*LIST) +
+                             TRUNCNBR(*NO) +
+                             TGTRLS(&TGTRLS)
+                DLTSPLF    FILE(JOBLOGT2) JOB(*) SPLNBR(*LAST)
+                MONMSG     MSGID(CPF0000)
+
+                CRTPGM     PGM(&TOLIB/JOBLOGT2) +
+                             MODULE(*PGM) +
+                             BNDSRVPGM(&TOLIB/JOBLOG &TOLIB/BASICS1) +
+                             ACTGRP(*NEW) +
+                             DETAIL(*BASIC) +
+                             TGTRLS(&TGTRLS)
+                DLTSPLF    FILE(JOBLOGT2) JOB(*) SPLNBR(*LAST)
+                MONMSG     MSGID(CPF0000)
+
+                DLTMOD    MODULE(&TOLIB/JOBLOGT2)
+
+                CHKOBJ     OBJ(LSTJOB) OBJTYPE(*SRVPGM)
+                MONMSG     MSGID(CPF9801) EXEC(DO)
+                   SNDPGMMSG  MSGID(CPDA0FF) MSGF(QCPFMSG) +
+                                MSGDTA('Service program LSTJOB not found.') +
+                                TOPGMQ(*PRV (*CTLBDY)) MSGTYPE(*DIAG)
+                   GOTO       CMDLBL(ENDTSTPGM)
+                ENDDO
+
+                /* Example 3 */
+                CRTRPGMOD  MODULE(&TOLIB/JOBLOGT3) +
+                             SRCFILE(&SRCLIB/&SRCFILE) +
+                             SRCMBR(*MODULE) +
+                             DBGVIEW(*LIST) +
+                             TRUNCNBR(*NO) +
+                             TGTRLS(&TGTRLS)
+                DLTSPLF    FILE(JOBLOGT3) JOB(*) SPLNBR(*LAST)
+                MONMSG     MSGID(CPF0000)
+
+                CRTPGM     PGM(&TOLIB/JOBLOGT3) +
+                             MODULE(*PGM) +
+                             BNDSRVPGM(&TOLIB/JOBLOG &TOLIB/LSTJOB &TOLIB/BASICS1) +
+                             ACTGRP(*NEW) +
+                             DETAIL(*BASIC) +
+                             TGTRLS(&TGTRLS)
+                DLTSPLF    FILE(JOBLOGT3) JOB(*) SPLNBR(*LAST)
+                MONMSG     MSGID(CPF0000)
+
+                DLTMOD    MODULE(&TOLIB/JOBLOGT3)
+ENDTSTPGM:
              ENDDO
 
      /* -------------------------------- */
@@ -122,3 +185,4 @@
              DLTMOD     MODULE(&TOLIB/JOBLOG1)
 
              ENDPGM
+

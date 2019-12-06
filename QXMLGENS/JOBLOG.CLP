@@ -69,6 +69,16 @@
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
+             XMLGENMBR  XMBR(JOBLOGT2  ) XMBRATR(RPGLE ) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
+                          XGENCRT(*NO ) XPARAM(*BLANK)
+
+             XMLGENMBR  XMBR(JOBLOGT3  ) XMBRATR(RPGLE ) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
+                          XGENCRT(*NO ) XPARAM(*BLANK)
+
              XMLGENMBR  XMBR(JOBLOG1   ) XMBRATR(RPGLE ) +
                           XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
