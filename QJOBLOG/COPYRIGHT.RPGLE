@@ -1,8 +1,8 @@
       /if not defined(COPYRIGHT_DSPEC)
-     H COPYRIGHT('V1.1.0 - 06.12.2019 - mailto:thomas.raddatz@tools400.de')
+     H COPYRIGHT('V1.1.1 - 11.12.2019 - mailto:thomas.raddatz@tools400.de')
       /eof
       /endif
      D JOBLOG_VERSION...
-     D                 C                   '1.1.0'
+     D                 C                   '1.1.1'
      D JOBLOG_DATE...
-     D                 C                   '06.12.2019'
+     D                 C                   '11.12.2019'

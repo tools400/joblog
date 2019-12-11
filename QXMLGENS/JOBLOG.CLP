@@ -99,6 +99,11 @@
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
+             XMLGENMBR  XMBR(TESTLJBL  ) XMBRATR(RPGLE ) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
+                          XGENCRT(*NO ) XPARAM(*BLANK)
+
 /* ---------------------------------- */
 /*  Create objects                    */
 /* ---------------------------------- */

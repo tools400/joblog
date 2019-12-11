@@ -36,6 +36,11 @@
       *                            handle, if the job log could not be      *
       *                            opened.                                  *
       *                                                                     *
+      *  03.12.2019  Th.Raddatz    Changed number of records to be returned *
+      *                            by QGYOLJBL for asynchronous lists from  *
+      *                            0 to 1 dues to IBM's response to PMR     *
+      *                            TS003090284.                             *
+      *                                                                     *
       *=====================================================================*
       *   >>PRE-COMPILER<<                                                  *
       *     >>CRTCMD<<  CRTRPGMOD   MODULE(&LI/&OB) +                       *
@@ -226,6 +231,16 @@
       *  Returns:
       *   hJobLog         Handle of the job log.
       *=========================================================================
+      *  See also: PMR TS003090284 (opened 4 Dec 2019)
+
+      *  QGYOLJBL does not return CPF3C53 when building the list asynchronously.
+      *  The first problem is that QGYOLJBL does not return error message
+      *  CPF3C53 (Job not found), when being called with a job that does not
+      *  exist.
+      *  The second problem is that QGYCLST crashes with CPF9999 (MCH0601) when
+      *  QGYOLJBL and QGYGTLE are called after QGYOLJBL has been called with a
+      *  non-existing job at the first attempt.
+      *=========================================================================
      P JobLog_open...
      P                 B                   export
      D                 PI                         like(JobLog_handle_t)
@@ -247,7 +262,7 @@
      D p_options       c                   2
      D p_direction     c                   3
      D p_strMsgKey     c                   4
-     D p_buildAsync    c                   5
+     D p_timeout       c                   5
       *
       *  Optional parameters
      D qJob            ds                  likeds(i_qJob) inz
@@ -290,7 +305,7 @@
             strMsgKey = getDftMsgKey(direction);
          endif;
 
-         if (%parms() >= p_buildAsync and %addr(i_timeout) <> *NULL);
+         if (%parms() >= p_timeout and %addr(i_timeout) <> *NULL);
             timeout = i_timeout;
             if (timeout <= 0);
                timeout = -1;
@@ -314,7 +329,9 @@
          clear handle.listInf;
 
          if (handle.isAsync);
-            numRcdsRtn = 0;  // All records are built asynchronously
+            // Return 1 record immediately due to PMR TS003090284
+            numRcdsRtn = 1;  // All records are built asynchronously
+            // numRcdsRtn = 0;  // All records are built asynchronously
          else;
             numRcdsRtn = -1; // All records are built synchronously
          endif;
