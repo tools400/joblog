@@ -95,7 +95,7 @@
                           SRCFILE(&SRCLIB/&SRCFILE) +
                           SRCMBR(JOBLOG) +
                           ACTGRP(*CALLER) +
-                          BNDSRVPGM(&TOLIB/BASICS1) +
+                          BNDSRVPGM(*LIBL/BASICS1) +
                           DETAIL(*BASIC) +
                           TEXT('Job Log API') +
                           TGTRLS(&TGTRLS)
