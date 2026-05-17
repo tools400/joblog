@@ -50,7 +50,7 @@
 //     >>COMPILE<<                                                     *
 //       >>PARM<< TRUNCNBR(*NO);                                       *
 //       >>PARM<< DBGVIEW(*LIST);                                      *
-//       >>PARM<< TGTRLS(V7R1M0  );                                    *
+//       >>PARM<< TGTRLS(V7R3M0  );                                    *
 //       >>PARM<< OPTION(*EVENTF);                                     *
 //     >>END-COMPILE<<                                                 *
 //     >>EXECUTE<<                                                     *
