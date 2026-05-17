@@ -1,8 +1,7 @@
-      /if not defined(COPYRIGHT_DSPEC)
-     H COPYRIGHT('V1.1.1 - 11.12.2019 - mailto:thomas.raddatz@tools400.de')
-      /eof
-      /endif
-     D JOBLOG_VERSION...
-     D                 C                   '1.1.1'
-     D JOBLOG_DATE...
-     D                 C                   '11.12.2019'
+**free
+/if not defined(COPYRIGHT_DSPEC)
+ctl-opt copyright('V1.2 - 17.05.2026 - mailto: thomas.raddatz@tools400.de');
+/eof
+/endif
+dcl-c JOBLOG_VERSION '1.2';
+dcl-c JOBLOG_DATE '17.05.2026';

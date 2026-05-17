@@ -1,280 +1,274 @@
-      *===============================================================*
-      *                                                               *
-      *  erstellt : 02.12.2019                                        *
-      *                                                               *
-      *===============================================================*
-      *                                                               *
-      *  Kurzdokumentation :                                          *
-      *                                                               *
-      *  Rahmentestprogramm mit Protokollausgabe                      *
-      *  Thema:                                                       *
-      *     Job Log API - Example 3                                   *
-      *                                                               *
-      *===============================================================*
-      * >>PRE-COMPILER<<                                              *
-      *   >>CRTCMD<< CRTRPGMOD    MODULE(&LI/&OB) +                   *
-      *                           SRCFILE(&SL/&SF) SRCMBR(&SM);       *
-      *   >>COMPILE<<                                                 *
-      *     >>PARM<< TRUNCNBR(*NO);                                   *
-      *     >>PARM<< DBGVIEW(*LIST);                                  *
-      *     >>PARM<< OPTION(*EVENTF);                                 *
-      *   >>END-COMPILE<<                                             *
-      *   >>EXECUTE<<                                                 *
-      *   >>CMD<<    CRTPGM       PGM(&LI/&OB) +                      *
-      *                           MODULE(&LI/&OB) +                   *
-      *                           BNDSRVPGM(*LIBL/BASICS1   +         *
-      *                                     *LIBL/LSTJOB    +         *
-      *                                     *LIBL/JOBLOG  ) +         *
-      *                           DETAIL(*BASIC) +                    *
-      *                           ACTGRP(*NEW);                       *
-      * >>END-PRE-COMPILER<<                                          *
-      *===============================================================*
-     H DEBUG
-     H OPTION(*SRCSTMT : *NODEBUGIO)
-     H DECEDIT('0,') DATEDIT(*DMY.)
-     H DATFMT(*ISO )  TIMFMT(*ISO )
-     H EXPROPTS(*RESDECPOS)
-     H EXTBININT(*YES)
-      *===============================================================*
-     FQSYSPRT   O    F   80        PRINTER OFLIND(*in70)
-      *
-      * ------------------------------------
-      *  External Prototypes
-      * ------------------------------------
-      /COPY QBASICS1,PBASICS1                      SrvPgm: Basics 1
-      /COPY QLSTJOB,PLSTJOB                        SrvPgm: List Jobs
-      /COPY QLSTJOB,QUSLJOB                        List Job (QUSLJOB) API
-      *
-      *  Examinee
-      /COPY QJOBLOG,PJOBLOG                        Job Log API
-      *
-      * ------------------------------------
-      *  Prototypes
-      * ------------------------------------
-      *
-     D PGM_ENTRY_POINT...
-     D                 PR                  extpgm('JOBLOGT3')
-     D  gi_job                       28A   const options(*nopass)
-      *
-     D main...
-     D                 PR                         extproc('main')
-     D  i_qJob                             const likeds(qJob_t)
-      *
-      *  Logs a message to the job log or appends it to a spooled file
-     D logMsg...
-     D                 PR                         extproc('logMsg')
-     D  i_text                      128A   value  varying options(*nopass)
-      *
-      *  Sends a message to QCMD
-     D sndMsg...
-     D                 PR                         extproc('sndMsg')
-     D  i_text                      128A   value  varying
-      *
-      *  Prints a given message to QSYSPRT.
-     D printMsg...
-     D                 PR                  extproc('printMsg')
-     D  i_text                      128A   value  varying options(*nopass)
-      *
-      *===============================================================*
-      *  Program Entry Point
-      *===============================================================*
-     D PGM_ENTRY_POINT...
-     D                 PI
-     D  gi_job                       28A   const options(*nopass)
-      *
-     D g_s1            s             10i 0
-     D g_s2            s             10i 0
-     D g_qJob          ds                  likeds(qJob_t)
-      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      /FREE
+**free
+//===============================================================*
+//                                                               *
+//  erstellt : 02.12.2019                                        *
+//                                                               *
+//===============================================================*
+//                                                               *
+//  Kurzdokumentation :                                          *
+//                                                               *
+//  Rahmentestprogramm mit Protokollausgabe                      *
+//  Thema:                                                       *
+//     Job Log API - Example 3                                   *
+//                                                               *
+//===============================================================*
+// >>PRE-COMPILER<<                                              *
+//   >>CRTCMD<< CRTRPGMOD    MODULE(&LI/&OB) +                   *
+//                           SRCFILE(&SL/&SF) SRCMBR(&SM);       *
+//   >>COMPILE<<                                                 *
+//     >>PARM<< TRUNCNBR(*NO);                                   *
+//     >>PARM<< DBGVIEW(*LIST);                                  *
+//     >>PARM<< OPTION(*EVENTF);                                 *
+//   >>END-COMPILE<<                                             *
+//   >>EXECUTE<<                                                 *
+//   >>CMD<<    CRTPGM       PGM(&LI/&OB) +                      *
+//                           MODULE(&LI/&OB) +                   *
+//                           BNDSRVPGM(*LIBL/BASICS1   +         *
+//                                     *LIBL/LSTJOB    +         *
+//                                     *LIBL/JOBLOG  ) +         *
+//                           DETAIL(*BASIC) +                    *
+//                           ACTGRP(*NEW);                       *
+// >>END-PRE-COMPILER<<                                          *
+//===============================================================*
+ctl-opt debug option(*srcstmt: *nodebugio);
+ctl-opt decedit('0,') datedit(*DMY.);
+ctl-opt datfmt(*iso) timfmt(*iso);
+ctl-opt expropts(*resdecpos);
+ctl-opt extbinint(*yes);
+//===============================================================*
+dcl-f QSYSPRT printer(80) usage(*output) oflind(*in70);
 
-       if (%parms() >= %parmnum(gi_job) and gi_job <> '*');
-         g_s1 = %scan('/': gi_job: 1);
-         g_s2 = %scan('/': gi_job: g_s1+1);
-         g_qJob.nbr = %subst(gi_job: 1: g_s1-1);
-         g_qJob.user = %subst(gi_job: g_s1+1: g_s2-(g_s1+1));
-         g_qJob.name = %subst(gi_job: g_s2+1);
-       else;
-         g_qJob.name = 'QZDASOINIT';
-         g_qJob.user = '*ALL';
-         g_qJob.nbr = '*ALL';
-       endif;
+// ------------------------------------
+//  External Prototypes
+// ------------------------------------
+/copy QBASICS1,PBASICS1                      SrvPgm: Basics 1
+/copy QLSTJOB,PLSTJOB                        SrvPgm: List Jobs
+/copy QLSTJOB,QUSLJOB                        List Job (QUSLJOB) API
 
-       main(g_qJob);
+//  Examinee
+/copy QJOBLOG,PJOBLOG                        Job Log API
 
-       if (%open(QSYSPRT));
-         close QSYSPRT;
-       endif;
+// ------------------------------------
+//  Prototypes
+// ------------------------------------
 
-       *inlr = *on;
+dcl-pr PGM_ENTRY_POINT extpgm('JOBLOGT3');
+  gi_job char(28) options(*nopass) const;
+end-pr;
 
-      /END-FREE
-      *
-      *===============================================================*
-      *  *** private ***
-      *  Logs a message to the job log or appends it to a spooled file
-      *===============================================================*
-     P logMsg...
-     P                 B
-     D                 PI
-     D  i_text                      128A   value  varying options(*nopass)
-      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      /FREE
+dcl-pr main extproc('main');
+  i_qJob likeds(qJob_t) const;
+end-pr;
+
+//  Logs a message to the job log or appends it to a spooled file
+dcl-pr logMsg extproc('logMsg');
+  i_text varchar(128) options(*nopass) value;
+end-pr;
+
+  //  Sends a message to QCMD
+dcl-pr sndMsg extproc('sndMsg');
+  i_text varchar(128) value;
+end-pr;
+
+  //  Prints a given message to QSYSPRT.
+dcl-pr printMsg extproc('printMsg');
+  i_text varchar(128) options(*nopass) value;
+end-pr;
+
+//===============================================================*
+  //  Program Entry Point
+  //===============================================================*
+dcl-pi PGM_ENTRY_POINT;
+  gi_job char(28) options(*nopass) const;
+end-pi;
+
+dcl-s g_s1 int(10);
+dcl-s g_s2 int(10);
+dcl-ds g_qJob likeds(qJob_t);
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+if (%parms() >= %parmnum(gi_job) and gi_job <> '*');
+g_s1 = %scan('/': gi_job: 1);
+g_s2 = %scan('/': gi_job: g_s1+1);
+g_qJob.nbr = %subst(gi_job: 1: g_s1-1);
+g_qJob.user = %subst(gi_job: g_s1+1: g_s2-(g_s1+1));
+g_qJob.name = %subst(gi_job: g_s2+1);
+  else;
+  g_qJob.name = 'QZDASOINIT';
+  g_qJob.user = '*ALL';
+  g_qJob.nbr = '*ALL';
+  endif;
+
+  main(g_qJob);
+
+  if (%open(QSYSPRT));
+close QSYSPRT;
+endif;
+
+*inlr = *on;
 
 
-       if (%parms() >= 1);
-         printMsg(i_text);
-       // sndMsg(i_text);
-       else;
-         printMsg('');
-       // no output to the job log
-       endif;
+//===============================================================*
+//  *** private ***
+//  Logs a message to the job log or appends it to a spooled file
+  //===============================================================*
+dcl-proc logMsg;
+  dcl-pi *n;
+    i_text varchar(128) options(*nopass) value;
+  end-pi;
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-      /END-FREE
-      *
-     P                 E
-      *
-      *===============================================================*
-      *  *** private ***
-      *  Sends a message to the caller.
-      *===============================================================*
-     P sndMsg...
-     P                 B
-     D                 PI
-     D  i_text                      128A   value  varying
-      *
-      *  Return value
-     D pBuffer         S               *   inz
-      *
-      *  Local fields
-     D msgKey          S              4A                        inz
-      *
-     D qMsgF           DS                  qualified            inz
-     D  name                         10A
-     D  lib                          10A
-      *
-     D errCode         DS                  qualified            inz
-     D  bytPrv                       10I 0
-     D  bytAvl                       10I 0
-     D  excID                         7A
-     D  reserved                      1A
-     D  excDta                      256A
-      *
-      *  Send Program Message (QMHSNDPM) API
-     D QMHSNDPM        PR                         extpgm('QMHSNDPM')
-     D   i_msgID                      7A   const
-     D   i_qMsgF                     20A   const
-     D   i_msgData                32767A   const  options(*varsize )
-     D   i_length                    10I 0 const
-     D   i_msgType                   10A   const
-     D   i_callStkE               32767A   const  options(*varsize )
-     D   i_callStkC                  10I 0 const
-     D   o_msgKey                     4A
-     D   io_ErrCode               32767A          options(*varsize )
-     D   i_lenStkE                   10I 0 const  options(*nopass  )
-     D   i_callStkEQ                 20A   const  options(*nopass  )
-     D   i_wait                      10I 0 const  options(*nopass  )
-     D   i_callStkEDT                10A   const  options(*nopass  )
-     D   i_ccsid                     10I 0 const  options(*nopass  )
-      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      /FREE
-       clear qMsgF;
-       qMsgF.name = 'QCPFMSG';
-       qMsgF.lib  = '*LIBL';
-       clear errCode;
-       errCode.bytPrv = %size(errCode);
-       QMHSNDPM('CPF9897': qMsgF: i_text: %len(i_text): '*INFO'
-                : '*CTLBDY': 1
-                : msgKey: errCode);
-      /END-FREE
-      *
-     P                 E
-      *
-      * =====================================================================
-      *  *** private ***
-      *  Prints a given message to QSYSPRT.
-      * =====================================================================
-     P printMsg...
-     P                 B
-     D                 PI
-     D  i_text                      128A   value  varying options(*nopass)
-      *
-      *  Local fields
-     D lineOutput      DS            80    inz
-      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      /free
-       if (not %open(QSYSPRT));
-         open QSYSPRT;
-       endif;
-       if (%parms() >= 1);
-         lineOutput = i_text;
-       endif;
-       write QSYSPRT lineOutput;
-      /end-free
-     P                 E
-      *
-      *===============================================================*
-      *  Main procedure
-      *===============================================================*
-     P main...
-     P                 B
-     D                 PI
-     D  i_qJob                             const likeds(qJob_t)
-      *
-      *  Helper fields
-     D hasJob          s               n
-     D hJobs           s                   like(lstJob_handle_t) inz
-     D jobl0100        ds                  likeds(jobl0100_t) inz
-     D qJob            ds                  likeds(qJob_t) inz
-     D hJobLog         s                   like(JobLog_handle_t) inz
-     D jobLogEntry     ds                  likeds(JobLog_jobLogEntry_t) inz
-     D count           s             10i 0
-      * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-      /FREE
 
-       if (f_opnJobLst(i_qJob.name: i_qJob.user: i_qJob.nbr: '*ACTIVE'
-                       : cLSTJOB_ORDERBY_NONE: hJobs));
+    if (%parms() >= 1);
+  printMsg(i_text);
+  // sndMsg(i_text);
+  else;
+  printMsg('');
+  // no output to the job log
+    endif;
 
-         hasJob = f_getFirstJob(hJobs: jobl0100);
-         dow (hasJob);
 
-           qJob.name = jobl0100.job;
-           qJob.user = jobl0100.user;
-           qJob.nbr = jobl0100.nbr;
+end-proc;
 
-           // Open the job log asynchronously
-           hJobLog = JobLog_open(qJob: JOBLOG_OPTION_MSG +
-                                       JOBLOG_OPTION_REPLACE_VARS +
-                                       JOBLOG_OPTION_SENDER
-                                     : JOBLOG_PREVIOUS
-                                     : *omit
-                                     : 60); // 60 secs timeout
+  //===============================================================*
+//  *** private ***
+//  Sends a message to the caller.
+//===============================================================*
+dcl-proc sndMsg;
+  dcl-pi *n;
+    i_text varchar(128) value;
+  end-pi;
 
-           // ================================================
-           //   Do some other lengthy operations ...
-           // ================================================
+//  Return value
+  dcl-s pBuffer pointer inz;
 
-           if (JobLog_isOpen(hJobLog));
-             // Spin through the job log entries from oldest to newest.
-             count = 0;
-             dow (JobLog_getEntry(hJobLog: jobLogEntry));
-               count += 1;
-             enddo;
+  //  Local fields
+  dcl-s msgKey char(4) inz;
 
-             // Close the job log
-             JobLog_close(hJobLog);
-           endif;
+  dcl-ds qMsgF qualified inz;
+    name char(10);
+    lib  char(10);
+  end-ds;
 
-           logMsg(%trim(qJob.nbr)  + '/' +
-                  %trim(qJob.user) + '/' +
-                  %trim(qJob.name) + ' count#: ' + %char(count));
+  dcl-ds errCode qualified inz;
+    bytPrv   int(10);
+    bytAvl   int(10);
+    excID    char(7);
+    reserved char(1);
+    excDta   char(256);
+  end-ds;
 
-           hasJob = f_getNextJob(hJobs: jobl0100);
-         enddo;
+    //  Send Program Message (QMHSNDPM) API
+  dcl-pr QMHSNDPM extpgm('QMHSNDPM');
+    i_msgID      char(7) const;
+    i_qMsgF      char(20) const;
+    i_msgData    char(32767) options(*varsize) const;
+    i_length     int(10) const;
+    i_msgType    char(10) const;
+    i_callStkE   char(32767) options(*varsize) const;
+    i_callStkC   int(10) const;
+    o_msgKey     char(4);
+    io_ErrCode   char(32767) options(*varsize);
+    i_lenStkE    int(10) options(*nopass) const;
+    i_callStkEQ  char(20) options(*nopass) const;
+    i_wait       int(10) options(*nopass) const;
+    i_callStkEDT char(10) options(*nopass) const;
+    i_ccsid      int(10) options(*nopass) const;
+  end-pr;
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    clear qMsgF;
+    qMsgF.name = 'QCPFMSG';
+    qMsgF.lib  = '*LIBL';
+  clear errCode;
+  errCode.bytPrv = %size(errCode);
+  QMHSNDPM('CPF9897': qMsgF: i_text: %len(i_text): '*INFO'
+  : '*CTLBDY': 1
+  : msgKey: errCode);
 
-         f_cloJobLst(hJobs);
-       endif;
+end-proc;
 
-      /END-FREE
-     P                 E
-      *
+// =====================================================================
+//  *** private ***
+//  Prints a given message to QSYSPRT.
+// =====================================================================
+dcl-proc printMsg;
+  dcl-pi *n;
+    i_text varchar(128) options(*nopass) value;
+  end-pi;
+
+//  Local fields
+  dcl-ds lineOutput len(80) inz;
+  end-ds;
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  if (not %open(QSYSPRT));
+  open QSYSPRT;
+  endif;
+  if (%parms() >= 1);
+  lineOutput = i_text;
+  endif;
+    write QSYSPRT lineOutput;
+end-proc;
+
+    //===============================================================*
+  //  Main procedure
+  //===============================================================*
+dcl-proc main;
+  dcl-pi *n;
+    i_qJob likeds(qJob_t) const;
+  end-pi;
+
+//  Helper fields
+  dcl-s hasJob ind;
+  dcl-s hJobs like(lstJob_handle_t) inz;
+  dcl-ds jobl0100 likeds(jobl0100_t) inz;
+  dcl-ds qJob likeds(qJob_t) inz;
+  dcl-s hJobLog like(JobLog_handle_t) inz;
+  dcl-ds jobLogEntry likeds(JobLog_jobLogEntry_t) inz;
+  dcl-s count int(10);
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  if (f_opnJobLst(i_qJob.name: i_qJob.user: i_qJob.nbr: '*ACTIVE'
+  : cLSTJOB_ORDERBY_NONE: hJobs));
+
+  hasJob = f_getFirstJob(hJobs: jobl0100);
+  dow (hasJob);
+
+    qJob.name = jobl0100.job;
+    qJob.user = jobl0100.user;
+    qJob.nbr = jobl0100.nbr;
+
+      // Open the job log asynchronously
+      hJobLog = JobLog_open(qJob: JOBLOG_OPTION_MSG +
+      JOBLOG_OPTION_REPLACE_VARS +
+      JOBLOG_OPTION_SENDER
+      : JOBLOG_PREVIOUS
+      : *omit
+      : 60); // 60 secs timeout
+
+      // ================================================
+      //   Do some other lengthy operations ...
+      // ================================================
+
+      if (JobLog_isOpen(hJobLog));
+      // Spin through the job log entries from oldest to newest.
+      count = 0;
+      dow (JobLog_getEntry(hJobLog: jobLogEntry));
+      count += 1;
+      enddo;
+
+        // Close the job log
+        JobLog_close(hJobLog);
+          endif;
+
+        logMsg(%trim(qJob.nbr)  + '/' +
+        %trim(qJob.user) + '/' +
+        %trim(qJob.name) + ' count#: ' + %char(count));
+
+      hasJob = f_getNextJob(hJobs: jobl0100);
+      enddo;
+
+      f_cloJobLst(hJobs);
+      endif;
+
+end-proc;
+
