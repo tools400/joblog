@@ -2510,11 +2510,11 @@ srccssid=  "01141">
 <copysrc><![CDATA[
 **free
 /if not defined(COPYRIGHT_DSPEC)
-ctl-opt copyright('V1.1.1 - 11.12.2019 - mailto: thomas.raddatz@tools400.de');
+ctl-opt copyright('V1.2 - 17.05.2026 - mailto: thomas.raddatz@tools400.de');
 /eof
 /endif
-dcl-c JOBLOG_VERSION '1.1.1';
-dcl-c JOBLOG_DATE '11.12.2019';
+dcl-c JOBLOG_VERSION '1.2';
+dcl-c JOBLOG_DATE '17.05.2026';
 ]]>  </copysrc>
 </mbr>
 <sendmsg  sendmsgid="CPF9897" sendmsgtype = "*STATUS   "><![CDATA[
