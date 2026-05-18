@@ -6,7 +6,7 @@ JOBLOG is service program that offers services for reading messages from job log
 
 Dependencies:
 
-- BASICS1
+- [BASICS1](https://github.com/tools400/basics1)
 
 ## Installation
 
