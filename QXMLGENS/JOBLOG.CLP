@@ -19,7 +19,7 @@
 /* -------------------------------------------------------------------------- */
              XMLGENINC  XINCLUDE(*YES)
 
-             XMLGENVRS XSRCFILE(QJOBLOG) XSRCLIB(TOOLS400) XSRCMBR(COPYRIGHT)
+             XMLGENVRS XSRCFILE(QJOBLOG) XSRCLIB(JOBLOGDVP) XSRCMBR(COPYRIGHT)
 
              XMLGENCND  XMSG('Create sample programs? (YES, NO)') +
                           XVALUES(YES NO) XVAR(&CRTTSTPGM)
@@ -30,77 +30,77 @@
 /*  Deploy source member              */
 /* ---------------------------------- */
              XMLGENMBR  XMBR(A_INSTALL ) XMBRATR(CLLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*PGM   ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(A_README  ) XMBRATR(TXT) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*PGM) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(CLIB      ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(COPYRIGHT ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(FDQJOB    ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(H_SPEC    ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(JOBLOG    ) XMBRATR(MAKSRV) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(JOBLOGT1  ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(JOBLOGT2  ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(JOBLOGT3  ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(JOBLOG1   ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(OPNLSTAPIS) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(PJOBLOG   ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(QGYOLJBL  ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 
              XMLGENMBR  XMBR(TESTLJBL  ) XMBRATR(RPGLE ) +
-                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(TOOLS400) +
+                          XFROMSRCF(QJOBLOG   ) XFROMSRCL(JOBLOGDVP) +
                           XTOSRCF(QJOBLOG   ) XOBJTYPE(*FILE  ) +
                           XGENCRT(*NO ) XPARAM(*BLANK)
 

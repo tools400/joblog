@@ -51,7 +51,7 @@
       appblddate CDATA #REQUIRED
      >
      ]>
-<upload  appname="JOBLOG"  appauthor="Thomas Raddatz"  appblddate=" 5/17/2026">
+<upload  appname="JOBLOG"  appauthor="Thomas Raddatz"  appblddate=" 5/20/2026">
 <install_instructions><![CDATA[
      *----------------------------------------------------------------      ------
      *  1. Upload entire XML to your AS/400 to a source file 112 long, into any mbr
@@ -1388,7 +1388,7 @@ srccssid=  "01141">
                           SRCFILE(&SRCLIB/&SRCFILE) +
                           SRCMBR(JOBLOG) +
                           ACTGRP(*CALLER) +
-                          BNDSRVPGM(&TOLIB/BASICS1) +
+                          BNDSRVPGM(*LIBL/BASICS1) +
                           DETAIL(*BASIC) +
                           TEXT('Job Log API') +
                           TGTRLS(&TGTRLS)
@@ -2604,9 +2604,9 @@ srccssid=  "01141">
      /*     >>PARM<< ACTGRP(*CALLER);                                         */
      /*     >>PARM<< ALWUPD(*YES);                                            */
      /*     >>PARM<< ALWLIBUPD(*YES);                                         */
-     /*     >>PARM<< BNDSRVPGM(&LI/BASICS1);                                  */
+     /*     >>PARM<< BNDSRVPGM(*LIBL/BASICS1);                                */
      /*     >>PARM<< TEXT('Job Log API');                                     */
-     /*     >>PARM<< TGTRLS(V7R1M0  );                                        */
+     /*     >>PARM<< TGTRLS(V7R3M0  );                                        */
      /*     >>PARM<< DETAIL(*BASIC);                                          */
      /*   >>END-LINK<<                                                        */
      /*   >>EXECUTE<<                                                         */
@@ -3524,7 +3524,7 @@ srccssid=  "01141">
 //     >>COMPILE<<                                                     *
 //       >>PARM<< TRUNCNBR(*NO);                                       *
 //       >>PARM<< DBGVIEW(*LIST);                                      *
-//       >>PARM<< TGTRLS(V7R1M0  );                                    *
+//       >>PARM<< TGTRLS(V7R3M0  );                                    *
 //       >>PARM<< OPTION(*EVENTF);                                     *
 //     >>END-COMPILE<<                                                 *
 //     >>EXECUTE<<                                                     *
